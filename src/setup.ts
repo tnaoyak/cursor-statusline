@@ -26,8 +26,7 @@ function normalizeItems(items: StatusItemId[]): StatusItemId[] {
   return normalized;
 }
 
-function colorPreview(item: StatusItemId, value: string, useColors: boolean): string {
-  if (!useColors) return value;
+function colorPreview(item: StatusItemId, value: string): string {
   switch (item) {
     case "model":
     case "model-with-params":
@@ -56,10 +55,10 @@ function previewLine(config: SetupConfig): string {
     .map((id) => {
       const definition = STATUS_ITEMS.find((item) => item.id === id);
       if (!definition) return "";
-      return colorPreview(id, definition.preview, config.useColors);
+      return colorPreview(id, definition.preview);
     })
     .filter(Boolean);
-  return segments.join(chalk.dim(" · "));
+  return segments.join(chalk.dim(" | "));
 }
 
 function moveIndex<T>(arr: T[], from: number, to: number): T[] {
@@ -157,6 +156,7 @@ export async function runSetup(): Promise<void> {
 
   console.log(chalk.bold("Cursor Statusline Setup"));
   console.log("This wizard generates statusline.sh and updates Cursor CLI config.");
+  console.log("Colors are always enabled, and labels are applied automatically by item type.");
 
   const selectedItems = await selectItems(current.items);
   if (selectedItems === CANCELLED) {
@@ -166,59 +166,9 @@ export async function runSetup(): Promise<void> {
 
   const reorderedItems = await reorderItems(selectedItems);
 
-  const colorAnswer = await prompts({
-    type: "confirm",
-    name: "useColors",
-    message: "Enable colors?",
-    initial: current.useColors
-  });
-  if (typeof colorAnswer.useColors !== "boolean") {
-    console.log("Cancelled.");
-    return;
-  }
-
-  const labelAnswer = await prompts({
-    type: "confirm",
-    name: "showLabels",
-    message: "Show labels (for example: model:, ctx:, tokens:)?",
-    initial: current.showLabels
-  });
-  if (typeof labelAnswer.showLabels !== "boolean") {
-    console.log("Cancelled.");
-    return;
-  }
-
-  const gitEnabledAnswer = await prompts({
-    type: "confirm",
-    name: "gitEnabled",
-    message: "Enable git items?",
-    initial: current.git.enabled
-  });
-  if (typeof gitEnabledAnswer.gitEnabled !== "boolean") {
-    console.log("Cancelled.");
-    return;
-  }
-
-  const gitDiffAnswer = await prompts({
-    type: "confirm",
-    name: "gitShowDiff",
-    message: "Enable git diff summary calculation?",
-    initial: current.git.showDiff
-  });
-  if (typeof gitDiffAnswer.gitShowDiff !== "boolean") {
-    console.log("Cancelled.");
-    return;
-  }
-
   const nextConfig: SetupConfig = {
     version: 1,
-    useColors: colorAnswer.useColors,
-    showLabels: labelAnswer.showLabels,
-    items: reorderedItems,
-    git: {
-      enabled: gitEnabledAnswer.gitEnabled,
-      showDiff: gitDiffAnswer.gitShowDiff
-    }
+    items: reorderedItems
   };
 
   await saveConfig(nextConfig);

@@ -21,7 +21,7 @@ npx -y cursor-statusline
 
 実行すると次を行います。
 
-1. 対話UIで表示項目、表示順、色設定を選択
+1. 対話UIで表示項目と表示順を選択
 2. `~/.config/cursor-statusline/config.toml` を保存
 3. `~/.cursor/statusline.sh` を生成または更新
 4. `~/.cursor/cli-config.json` の `statusLine.command` を `~/.cursor/statusline.sh` に設定

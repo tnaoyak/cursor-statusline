@@ -21,7 +21,7 @@ npx -y cursor-statusline
 
 Running setup performs the following:
 
-1. Choose enabled items, order, and color options in interactive UI
+1. Choose enabled items and order in interactive UI
 2. Save `~/.config/cursor-statusline/config.toml`
 3. Generate or update `~/.cursor/statusline.sh`
 4. Set `statusLine.command` to `~/.cursor/statusline.sh` in `~/.cursor/cli-config.json`

@@ -40,10 +40,8 @@ describe("defaultConfig", () => {
 });
 
 describe("buildStatuslineScript", () => {
-  itIfJq("shows labels when showLabels=true", async () => {
+  itIfJq("uses item-specific labels and keeps model/cwd unlabeled", async () => {
     const config = defaultConfig();
-    config.showLabels = true;
-    config.useColors = false;
 
     const payload = {
       model: { display_name: "gpt-5" },
@@ -54,16 +52,16 @@ describe("buildStatuslineScript", () => {
     const result = await runGeneratedScript(payload, config);
     expect(result.status).toBe(0);
     expect(result.stderr).toBe("");
-    expect(result.stdout).toContain("model: gpt-5");
-    expect(result.stdout).toContain("cwd: /tmp/project");
+    expect(result.stdout).toContain("gpt-5");
+    expect(result.stdout).toContain("/tmp/project");
     expect(result.stdout).toContain("ctx: 42% used");
+    expect(result.stdout).not.toContain("model:");
+    expect(result.stdout).not.toContain("cwd:");
   });
 
   itIfJq("avoids duplicated model param summary", async () => {
     const config = defaultConfig();
     config.items = ["model-with-params"];
-    config.showLabels = false;
-    config.useColors = false;
 
     const payload = {
       model: {
@@ -75,5 +73,23 @@ describe("buildStatuslineScript", () => {
     const result = await runGeneratedScript(payload, config);
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("Codex 5.3 High");
+  });
+
+  itIfJq("formats token values in k units", async () => {
+    const config = defaultConfig();
+    config.items = ["tokens-used", "tokens-in", "tokens-out"];
+
+    const payload = {
+      context_window: {
+        total_input_tokens: 12000,
+        total_output_tokens: 3420
+      }
+    };
+
+    const result = await runGeneratedScript(payload, config);
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("tokens: 15.4k used");
+    expect(result.stdout).toContain("tokens: 12k in");
+    expect(result.stdout).toContain("tokens: 3.4k out");
   });
 });

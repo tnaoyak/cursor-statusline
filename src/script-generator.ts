@@ -10,14 +10,10 @@ export function buildStatuslineScript(config: SetupConfig): string {
   return `#!/usr/bin/env bash
 set -euo pipefail
 
-USE_COLORS=${config.useColors ? 1 : 0}
-SHOW_LABELS=${config.showLabels ? 1 : 0}
-GIT_ENABLED=${config.git.enabled ? 1 : 0}
-GIT_SHOW_DIFF=${config.git.showDiff ? 1 : 0}
-
 ITEMS=(
 ${items}
 )
+SEPARATOR=$'\\033[2m | \\033[0m'
 
 if ! command -v jq >/dev/null 2>&1; then
   exit 0
@@ -28,6 +24,34 @@ PAYLOAD="$(cat)"
 json_value() {
   local query="$1"
   printf '%s' "$PAYLOAD" | jq -r "$query // empty" 2>/dev/null
+}
+
+format_k() {
+  local raw="$1"
+  if [ -z "$raw" ]; then
+    return
+  fi
+  if ! [[ "$raw" =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+    printf '%s' "$raw"
+    return
+  fi
+  awk -v n="$raw" 'BEGIN {
+    abs = (n < 0 ? -n : n);
+    if (abs >= 1000) {
+      k = n / 1000;
+      rounded = int((k * 10) + (k >= 0 ? 0.5 : -0.5)) / 10;
+      if (rounded == 0) rounded = 0;
+      if (rounded == int(rounded)) {
+        printf "%.0fk", rounded;
+      } else {
+        printf "%.1fk", rounded;
+      }
+    } else {
+      v = int(n + (n >= 0 ? 0.5 : -0.5));
+      if (v == 0) v = 0;
+      printf "%d", v;
+    }
+  }'
 }
 
 home_shorten() {
@@ -43,9 +67,6 @@ home_shorten() {
 }
 
 git_branch() {
-  if [ "$GIT_ENABLED" -ne 1 ]; then
-    return
-  fi
   git rev-parse --git-dir >/dev/null 2>&1 || return
   git branch --show-current 2>/dev/null || true
 }
@@ -65,9 +86,6 @@ project_name() {
 }
 
 git_diff_summary() {
-  if [ "$GIT_ENABLED" -ne 1 ] || [ "$GIT_SHOW_DIFF" -ne 1 ]; then
-    return
-  fi
   git rev-parse --git-dir >/dev/null 2>&1 || return
   local stat
   stat="$(git diff --shortstat HEAD 2>/dev/null || true)"
@@ -97,30 +115,19 @@ paint() {
   if [ -z "$value" ]; then
     return
   fi
-  if [ "$USE_COLORS" -eq 1 ]; then
-    local code
-    code="$(color_code_for_item "$item")"
-    printf '\\033[%sm%s\\033[0m' "$code" "$value"
-  else
-    printf '%s' "$value"
-  fi
+  local code
+  code="$(color_code_for_item "$item")"
+  printf '\\033[%sm%s\\033[0m' "$code" "$value"
 }
 
 label_for_item() {
   case "$1" in
-    model|model-with-params) printf 'model' ;;
-    current-dir) printf 'cwd' ;;
-    project-name) printf 'project' ;;
-    git-branch) printf 'branch' ;;
     git-diff) printf 'diff' ;;
     context-used|context-remaining) printf 'ctx' ;;
     context-window-size) printf 'window' ;;
     tokens-used|tokens-in|tokens-out) printf 'tokens' ;;
     session-id) printf 'session' ;;
-    session-name) printf 'name' ;;
     cli-version) printf 'version' ;;
-    vim-mode) printf 'vim' ;;
-    worktree-name) printf 'worktree' ;;
     *) printf '' ;;
   esac
 }
@@ -180,30 +187,38 @@ item_value() {
       ;;
     context-window-size)
       local size
+      local size_k
       size="$(json_value '.context_window.context_window_size')"
       if [ -n "$size" ]; then
-        printf '%s window' "$size"
+        size_k="$(format_k "$size")"
+        printf '%s window' "$size_k"
       fi
       ;;
     tokens-used)
       local total
+      local total_k
       total="$(json_value '((.context_window.total_input_tokens // 0) + (.context_window.total_output_tokens // 0))')"
       if [ -n "$total" ] && [ "$total" != "0" ]; then
-        printf '%s used' "$total"
+        total_k="$(format_k "$total")"
+        printf '%s used' "$total_k"
       fi
       ;;
     tokens-in)
       local input_tokens
+      local input_tokens_k
       input_tokens="$(json_value '.context_window.total_input_tokens')"
       if [ -n "$input_tokens" ]; then
-        printf '%s in' "$input_tokens"
+        input_tokens_k="$(format_k "$input_tokens")"
+        printf '%s in' "$input_tokens_k"
       fi
       ;;
     tokens-out)
       local output_tokens
+      local output_tokens_k
       output_tokens="$(json_value '.context_window.total_output_tokens')"
       if [ -n "$output_tokens" ]; then
-        printf '%s out' "$output_tokens"
+        output_tokens_k="$(format_k "$output_tokens")"
+        printf '%s out' "$output_tokens_k"
       fi
       ;;
     session-id)
@@ -236,11 +251,9 @@ segments=()
 for item in "\${ITEMS[@]}"; do
   value="$(item_value "$item" || true)"
   if [ -n "$value" ]; then
-    if [ "$SHOW_LABELS" -eq 1 ]; then
-      label="$(label_for_item "$item")"
-      if [ -n "$label" ]; then
-        value="$label: $value"
-      fi
+    label="$(label_for_item "$item")"
+    if [ -n "$label" ]; then
+      value="$label: $value"
     fi
     segments+=("$(paint "$item" "$value")")
   fi
@@ -255,7 +268,7 @@ for segment in "\${segments[@]}"; do
   if [ -z "$output" ]; then
     output="$segment"
   else
-    output="$output · $segment"
+    output="$output$SEPARATOR$segment"
   fi
 done
 

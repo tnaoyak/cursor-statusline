@@ -30,13 +30,7 @@ export interface StatusItemDefinition {
 
 export interface SetupConfig {
   version: number;
-  useColors: boolean;
-  showLabels: boolean;
   items: StatusItemId[];
-  git: {
-    enabled: boolean;
-    showDiff: boolean;
-  };
 }
 
 export const DEFAULT_ITEMS: StatusItemId[] = [
@@ -107,28 +101,28 @@ export const STATUS_ITEMS: StatusItemDefinition[] = [
     id: "context-window-size",
     title: "context-window-size",
     description: "Context window size",
-    preview: "200000 window",
+    preview: "200k window",
     defaultEnabled: false
   },
   {
     id: "tokens-used",
     title: "tokens-used",
     description: "Input + output token total",
-    preview: "15420 used",
+    preview: "15.4k used",
     defaultEnabled: true
   },
   {
     id: "tokens-in",
     title: "tokens-in",
     description: "Input token total",
-    preview: "12000 in",
+    preview: "12k in",
     defaultEnabled: false
   },
   {
     id: "tokens-out",
     title: "tokens-out",
     description: "Output token total",
-    preview: "3420 out",
+    preview: "3.4k out",
     defaultEnabled: false
   },
   {
@@ -171,13 +165,7 @@ export const STATUS_ITEMS: StatusItemDefinition[] = [
 export function defaultConfig(): SetupConfig {
   return {
     version: 1,
-    useColors: true,
-    showLabels: false,
-    items: [...DEFAULT_ITEMS],
-    git: {
-      enabled: true,
-      showDiff: true
-    }
+    items: [...DEFAULT_ITEMS]
   };
 }
 

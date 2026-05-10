@@ -1,6 +1,6 @@
 {
   "name": "cursor-statusline",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Interactive setup tool that generates Cursor statusline.sh",
   "author": "tnaoyak",
   "repository": {
